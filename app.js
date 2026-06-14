@@ -1,5 +1,5 @@
 // Konfigurasi endpoint Google Apps Script Web App.
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyPJxhHyQHQZ8PC4GyaBLdPN3ImkW-sD3edtfmAzc3Fs0f2qcZguPnStOHubJb0r3jf/exec";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbx9Hc9AZz-kA618EwNK0t2b_jpGZue8keroPTgSGMd_rrJsTCs9hgXcU8ZGlaMQNkiA/exec";
 const STORAGE_KEY = "employee";
 
 // Hardcoded outlet untuk validasi GPS di frontend.
@@ -8,7 +8,7 @@ const STORES = {
     name: "COOLER CITY",
     lat: -7.97521191086531,
     lng: 112.61983167177651,
-    radius: 1000000
+    radius: 100
   },
   RZ02: {
     name: "GOMEE MITRA",
@@ -163,7 +163,10 @@ function loginUser() {
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    body
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
   })
     .then((response) => response.json())
     .then((data) => {
@@ -211,7 +214,10 @@ function refreshSession() {
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    body
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
   })
     .then((response) => response.json())
     .then((data) => {
@@ -376,7 +382,10 @@ function sendAttendance(payload) {
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    body
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
   })
     .then((response) => response.json())
     .then((data) => {
