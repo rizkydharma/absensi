@@ -1,0 +1,9 @@
+{
+  "name": "Absensi Karyawan",
+  "short_name": "Absensi",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#edf7ee",
+  "theme_color": "#1f8a4d",
+  "description": "Aplikasi absensi berbasis web dengan dukungan PWA."
+}

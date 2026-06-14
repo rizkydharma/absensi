@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1f8a4d" />
+  <title>Absensi Karyawan</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="app-header">
+      <div>
+        <span class="badge">By : Rizky Prasetya</span>
+        <h1>Absensi Karyawan</h1>
+        <p>Login, pilih store aktif, dan lakukan absensi masuk / pulang.</p>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="card" id="login-card">
+        <h2>Login</h2>
+        <p class="card-text">Masukkan ID dan PIN untuk memulai absensi.</p>
+
+        <label for="employee-id">ID Karyawan</label>
+        <input type="text" id="employee-id" placeholder="Contoh: RZ001" autocomplete="username" />
+
+        <label for="employee-pin">PIN</label>
+        <input type="password" id="employee-pin" placeholder="PIN Anda" autocomplete="current-password" />
+
+        <button id="login-button" class="button primary large">Login</button>
+      </section>
+
+      <section class="card hidden" id="attendance-card">
+        <div class="attendance-header">
+          <div>
+            <h2 id="employee-name">Nama Karyawan</h2>
+            <p id="employee-job">Jabatan</p>
+          </div>
+
+          <button id="logout-button" class="button tertiary">Logout</button>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="info-box">
+            <span>ID Karyawan</span>
+            <strong id="employee-id-value">-</strong>
+          </div>
+          <div class="info-box">
+            <span>Store Default</span>
+            <strong id="employee-default-store">-</strong>
+          </div>
+          <div class="info-box">
+            <span>Store Aktif Hari Ini</span>
+            <strong id="employee-active-store">-</strong>
+          </div>
+          <div class="info-box">
+            <span>Status Hari Ini</span>
+            <strong id="attendance-status">Belum Absen</strong>
+          </div>
+        </div>
+
+        <label for="store-select">Pilih Lokasi Kerja Hari Ini</label>
+        <select id="store-select">
+          <option value="">-- Pilih Outlet --</option>
+        </select>
+
+        <div class="status-panel">
+          <p>Status lokasi:</p>
+          <strong id="status-message">Siap</strong>
+        </div>
+
+        <div class="button-group">
+          <button id="check-in-button" class="button primary large">ABSEN MASUK</button>
+          <button id="check-out-button" class="button secondary large">ABSEN PULANG</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast hidden" id="toast"></div>
+    <div class="loading-overlay hidden" id="loading-overlay">
+      <div class="loader"></div>
+      <p>Meminta lokasi...</p>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Pastikan izin lokasi aktif dan browser mendukung GPS.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
