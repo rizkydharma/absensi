@@ -5,7 +5,7 @@ const STORES = {
     name: "COOLER CITY",
     lat: -7.97521191086531,
     lng: 112.61983167177651,
-    radius: 100
+    radius: 1000000
   },
   RZ02: {
     name: "GOMEE MITRA",
@@ -34,7 +34,9 @@ const COLUMNS = {
   JAM_PULANG: 10,
   LOCATE: 11,
   RADIUS: 12,
-  DEVICE: 13
+  DEVICE: 13,
+  MENIT_TELAT: 14,
+  ALASAN_TELAT: 15
 };
 
 function doGet(e) {
@@ -42,9 +44,43 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  // Log parameter and raw postData for debugging (helps identify how the browser sent the form)
+  try {
+    Logger.log('PARAMETER:' + JSON.stringify(e.parameter));
+    console.log('PARAMETER:' + JSON.stringify(e.parameter));
+  } catch (err) {
+    Logger.log('PARAMETER: <unserializable>');
+    console.log('PARAMETER: <unserializable>');
+  }
+  try {
+    Logger.log('POSTDATA_TYPE:' + (e.postData && e.postData.type));
+    console.log('POSTDATA_TYPE:' + (e.postData && e.postData.type));
+    Logger.log('POSTDATA_CONTENTS:' + (e.postData && String(e.postData.contents)));
+    console.log('POSTDATA_CONTENTS:' + (e.postData && String(e.postData.contents)));
+  } catch (err) {
+    Logger.log('POSTDATA: <unserializable>');
+    console.log('POSTDATA: <unserializable>');
+  }
+
   const request = parseRequest(e);
+  try {
+    Logger.log('PARSED_REQUEST:' + JSON.stringify(request));
+    console.log('PARSED_REQUEST:' + JSON.stringify(request));
+  } catch (err) {
+    Logger.log('PARSED_REQUEST: <unserializable>');
+    console.log('PARSED_REQUEST: <unserializable>');
+  }
+
   if (!request || !request.action) {
-    return buildResponse(false, "Permintaan tidak valid.");
+    const debugInfo = {
+      parameterKeys: e.parameter ? Object.keys(e.parameter) : [],
+      parametersKeys: e.parameters ? Object.keys(e.parameters) : [],
+      postDataType: e.postData && e.postData.type ? e.postData.type : null,
+      postDataLength: e.postData && e.postData.contents ? String(e.postData.contents).length : 0,
+      postDataSample: e.postData && e.postData.contents ? String(e.postData.contents).slice(0, 200) : null,
+      parsedRequest: request || null
+    };
+    return buildResponse(false, "Permintaan tidak valid.", { debug: debugInfo });
   }
 
   if (request.action === "LOGIN") {
@@ -58,12 +94,93 @@ function doPost(e) {
   return buildResponse(false, "Aksi tidak dikenali.");
 }
 
+/**
+ * Parse request from different content types.
+ * Supports:
+ * - e.parameter (form fields parsed by Apps Script)
+ * - application/x-www-form-urlencoded in e.postData.contents
+ * - JSON body in e.postData.contents
+ * - basic multipart/form-data parsing (best-effort)
+ */
 function parseRequest(e) {
-  try {
-    return JSON.parse(e.postData.contents);
-  } catch (error) {
-    return null;
+  // 1) Prefer parsed parameters if available
+  if (e.parameter && Object.keys(e.parameter).length > 0) {
+    return e.parameter;
   }
+
+  // 2) If postData exists, inspect contents
+  if (e.postData && e.postData.contents) {
+    var contents = e.postData.contents;
+
+    // Try JSON first
+    try {
+      var parsedJson = JSON.parse(contents);
+      return parsedJson;
+    } catch (err) {
+      // not JSON
+    }
+
+    // Try URL-encoded form like: a=1&b=2
+    try {
+      var obj = {};
+      contents.split('&').forEach(function (pair) {
+        if (!pair) return;
+        var parts = pair.split('=');
+        var key = decodeURIComponent(parts[0] || '').trim();
+        var val = decodeURIComponent(parts[1] || '').trim();
+        if (key) obj[key] = val;
+      });
+      if (Object.keys(obj).length > 0) return obj;
+    } catch (err) {
+      // ignore
+    }
+
+    // Try a simple multipart/form-data parse (best-effort, extracts text fields)
+    try {
+      var mp = String(contents);
+      var boundary = null;
+      if (typeof e.postData.type === 'string') {
+        var match = e.postData.type.match(/boundary=(.*)$/);
+        if (match) {
+          boundary = match[1];
+        }
+      }
+
+      if (boundary) {
+        var parts = mp.split('--' + boundary);
+        var out = {};
+        parts.forEach(function (part) {
+          if (!part || part === '--' || part.trim() === '') return;
+          var headerBodySplit = part.split('\r\n\r\n');
+          if (headerBodySplit.length < 2) return;
+          var header = headerBodySplit[0];
+          var body = headerBodySplit.slice(1).join('\r\n\r\n');
+          var nameMatch = header.match(/name="([^"]+)"/);
+          if (!nameMatch) return;
+          var key = nameMatch[1];
+          var value = body.replace(/\r?\n$/, '').replace(/\r?\n--$/, '').trim();
+          out[key] = value;
+        });
+        if (Object.keys(out).length > 0) return out;
+      }
+
+      var re = /name="([^"]+)"[\s\S]*?\r?\n\r?\n([\s\S]*?)(?=\r?\n--|$)/g;
+      var m;
+      var out = {};
+      while ((m = re.exec(mp)) !== null) {
+        var k = m[1];
+        var v = m[2];
+        v = v.replace(/\r?\n$/, '');
+        out[k] = v;
+      }
+      if (Object.keys(out).length > 0) return out;
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  // Nothing matched
+  return null;
 }
 
 function handleLogin(request) {
@@ -83,9 +200,21 @@ function handleLogin(request) {
   const attendanceStatus = attendanceRecord ? getAttendanceStatus(attendanceRecord) : "Belum Absen";
 
   return buildResponse(true, "Login berhasil.", {
-    user,
+    user: sanitizeUser(user),
     attendanceStatus
   });
+}
+
+function sanitizeUser(user) {
+  if (!user || typeof user !== 'object') return user;
+  const allowedKeys = ["ID", "NAMA", "JABATAN", "NAME STORE", "DEFAULT_STORE"];
+  const cleanUser = {};
+  allowedKeys.forEach(function (key) {
+    if (user.hasOwnProperty(key)) {
+      cleanUser[key] = user[key];
+    }
+  });
+  return cleanUser;
 }
 
 function handleAbsensi(request) {
@@ -97,6 +226,7 @@ function handleAbsensi(request) {
   const longitude = parseFloat(request.longitude);
   const device = String(request.device || "").trim();
   const waktu = String(request.waktu || "").trim();
+  const alasanTelat = String(request.alasan_telat || "").trim();
 
   if (!id || !pin || !jenisAbsen || !storeAktif || isNaN(latitude) || isNaN(longitude) || !waktu) {
     return buildResponse(false, "Data absensi tidak lengkap.");
@@ -124,44 +254,107 @@ function handleAbsensi(request) {
   }
 
   const today = getTodayString();
-  const rowIndex = findAttendanceRow(sheet, today, id);
-  if (!rowIndex) {
-    return buildResponse(false, "Data absensi hari ini tidak ditemukan. Hubungi admin.");
+  let rowIndex = findAttendanceRow(sheet, today, id);
+  const existingRow = rowIndex ? sheet.getRange(rowIndex, 1, 1, COLUMNS.ALASAN_TELAT).getValues()[0] : null;
+  const existingStatusGaji = existingRow ? existingRow[COLUMNS.STATUS_GAJI - 1] : "";
+  const existingGaji = existingRow ? existingRow[COLUMNS.GAJI - 1] : "";
+  const gajiValue = user.GAJI || existingGaji || "";
+  const statusGajiValue = existingStatusGaji || user["STATUS GAJI"] || "";
+  const locateUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+  const employeeName = user.NAMA || id;
+  const defaultRow = [
+    today,
+    user.NAMA || "",
+    id,
+    store.name,
+    "",
+    gajiValue,
+    "",
+    statusGajiValue,
+    "",
+    "",
+    locateUrl,
+    Math.round(distance),
+    device,
+    0,
+    ""
+  ];
+
+  function saveRow(values) {
+    if (rowIndex) {
+      sheet.getRange(rowIndex, 1, 1, values.length).setValues([values]);
+    } else {
+      sheet.appendRow(values);
+      rowIndex = sheet.getLastRow();
+    }
   }
 
-  const rowValues = sheet.getRange(rowIndex, 1, 1, COLUMNS.DEVICE).getValues()[0];
-  const jamDatangValue = String(rowValues[COLUMNS.JAM_DATANG - 1] || "").trim();
-  const jamPulangValue = String(rowValues[COLUMNS.JAM_PULANG - 1] || "").trim();
-
-  const locateUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
-
   if (jenisAbsen === "MASUK") {
-    if (jamDatangValue) {
-      return buildResponse(false, "Anda sudah absen masuk hari ini");
+    const hasilWaktu = getJakartaDateTime(waktu);
+    const totalMinutes = hasilWaktu.hour * 60 + hasilWaktu.minute;
+    const mulaiKerja = 10 * 60;
+    const batasTepatWaktu = 10 * 60 + 5;
+
+    let keterangan = "";
+    let menitTelat = 0;
+    let alasanTelatValue = "";
+    let responseMessage = "Absensi berhasil.";
+
+    if (totalMinutes < mulaiKerja) {
+      const earlyMinutes = mulaiKerja - totalMinutes;
+      keterangan = `Datang lebih awal ${earlyMinutes} menit`;
+      responseMessage = `Hai ${employeeName}\n\nSelamat pagi.\n\nTerima kasih sudah datang lebih awal ${earlyMinutes} menit.\n\nSelamat bekerja dan semoga harimu menyenangkan.`;
+    } else if (totalMinutes <= batasTepatWaktu) {
+      keterangan = "Tepat waktu";
+      responseMessage = `Hai ${employeeName}\n\nSelamat pagi.\n\nTerima kasih sudah datang bekerja tepat waktu.\n\nSelamat bekerja.`;
+    } else {
+      const lateMinutes = totalMinutes - mulaiKerja;
+      if (!alasanTelat) {
+        return buildResponse(false, "Alasan keterlambatan wajib diisi.");
+      }
+      keterangan = "Terlambat";
+      menitTelat = lateMinutes;
+      alasanTelatValue = alasanTelat;
+      responseMessage = `Hai ${employeeName}\n\nSelamat pagi.\n\nAnda terlambat ${lateMinutes} menit.\n\nTerima kasih telah mengisi alasan keterlambatan.\n\nSelamat bekerja.`;
     }
 
-    sheet.getRange(rowIndex, COLUMNS.STORE).setValue(store.name);
-    sheet.getRange(rowIndex, COLUMNS.STATUS).setValue("MASUK");
-    sheet.getRange(rowIndex, COLUMNS.JAM_DATANG).setValue(waktu);
-    sheet.getRange(rowIndex, COLUMNS.LOCATE).setValue(locateUrl);
-    sheet.getRange(rowIndex, COLUMNS.RADIUS).setValue(Math.round(distance));
-    sheet.getRange(rowIndex, COLUMNS.DEVICE).setValue(device);
+    const row = defaultRow.slice();
+    row[COLUMNS.STATUS - 1] = "MASUK";
+    row[COLUMNS.KETERANGAN - 1] = keterangan;
+    row[COLUMNS.JAM_DATANG - 1] = waktu;
+    row[COLUMNS.LOCATE - 1] = locateUrl;
+    row[COLUMNS.RADIUS - 1] = Math.round(distance);
+    row[COLUMNS.DEVICE - 1] = device;
+    row[COLUMNS.MENIT_TELAT - 1] = menitTelat;
+    row[COLUMNS.ALASAN_TELAT - 1] = alasanTelatValue;
 
-    return buildResponse(true, "Absensi berhasil");
+    saveRow(row);
+    return buildResponse(true, responseMessage);
   }
 
   if (jenisAbsen === "PULANG") {
-    if (jamPulangValue) {
-      return buildResponse(false, "Anda sudah absen pulang hari ini");
+    if (!rowIndex) {
+      return buildResponse(false, "Data absensi hari ini tidak ditemukan. Hubungi admin.");
     }
 
-    sheet.getRange(rowIndex, COLUMNS.STORE).setValue(store.name);
-    sheet.getRange(rowIndex, COLUMNS.JAM_PULANG).setValue(waktu);
-    sheet.getRange(rowIndex, COLUMNS.LOCATE).setValue(locateUrl);
-    sheet.getRange(rowIndex, COLUMNS.RADIUS).setValue(Math.round(distance));
-    sheet.getRange(rowIndex, COLUMNS.DEVICE).setValue(device);
+    const hasilWaktu = getJakartaDateTime(waktu);
+    const totalMinutes = hasilWaktu.hour * 60 + hasilWaktu.minute;
+    const waktuPulang = 19 * 60 + 45;
 
-    return buildResponse(true, "Absensi berhasil");
+    if (totalMinutes < waktuPulang) {
+      return buildResponse(false, "Jam pulang belum tersedia. Absensi pulang dapat dilakukan mulai pukul 19:45 WIB.");
+    }
+
+    const row = defaultRow.slice();
+    row[COLUMNS.STATUS - 1] = "PULANG";
+    row[COLUMNS.KETERANGAN - 1] = existingRow ? existingRow[COLUMNS.KETERANGAN - 1] : "";
+    row[COLUMNS.JAM_DATANG - 1] = existingRow ? existingRow[COLUMNS.JAM_DATANG - 1] : "";
+    row[COLUMNS.JAM_PULANG - 1] = waktu;
+    row[COLUMNS.MENIT_TELAT - 1] = existingRow ? existingRow[COLUMNS.MENIT_TELAT - 1] : 0;
+    row[COLUMNS.ALASAN_TELAT - 1] = existingRow ? existingRow[COLUMNS.ALASAN_TELAT - 1] : "";
+
+    saveRow(row);
+    return buildResponse(true, `Hai ${employeeName}\n\nTerima kasih atas kerja kerasnya hari ini.\n\nHati-hati di jalan dan selamat beristirahat.`);
   }
 
   return buildResponse(false, "Jenis absensi tidak valid.");
@@ -282,6 +475,13 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+function getJakartaDateTime(isoString) {
+  const date = new Date(isoString);
+  const hour = parseInt(Utilities.formatDate(date, "Asia/Jakarta", "HH"), 10);
+  const minute = parseInt(Utilities.formatDate(date, "Asia/Jakarta", "mm"), 10);
+  return { hour, minute };
+}
+
 function getSpreadsheet() {
   if (!SPREADSHEET_ID || SPREADSHEET_ID.indexOf("REPLACE_WITH") !== -1) {
     throw new Error("SPREADSHEET_ID belum dikonfigurasi.");
@@ -297,5 +497,7 @@ function buildResponse(success, message, data) {
   if (data) {
     Object.assign(response, data);
   }
-  return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(response))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader("Access-Control-Allow-Origin", "*");
 }

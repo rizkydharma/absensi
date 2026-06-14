@@ -245,6 +245,56 @@ button:disabled {
   max-width: calc(100% - 40px);
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.16);
+  padding: 24px;
+}
+
+.modal h2 {
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  color: #1f8a4d;
+}
+
+.modal p {
+  margin: 0 0 18px;
+  color: #4d5b4d;
+  line-height: 1.6;
+}
+
+.modal textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid rgba(31, 138, 77, 0.18);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 1rem;
+  resize: vertical;
+  outline: none;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+
 .toast.error {
   background: #c9303c;
 }

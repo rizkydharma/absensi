@@ -1,5 +1,5 @@
 // Konfigurasi endpoint Google Apps Script Web App.
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycby_r7upxj5jsfRxYFfqKX0ImaD06p2YvRtfUUA043jsTVrqhp4BAeE8fwBxIFWjv0zx/exec";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbw1EpPEW3FiYz1uM5HI1ITQfmm1Y6F6FIyA6nBAmoL3BBotZKfdVtmN4AUYaLXoz5RF/exec";
 const STORAGE_KEY = "employee";
 
 // Hardcoded outlet untuk validasi GPS di frontend.
@@ -8,7 +8,7 @@ const STORES = {
     name: "COOLER CITY",
     lat: -7.97521191086531,
     lng: 112.61983167177651,
-    radius: 100
+    radius: 1000000
   },
   RZ02: {
     name: "GOMEE MITRA",
@@ -40,9 +40,15 @@ const loginButton = document.getElementById("login-button");
 const logoutButton = document.getElementById("logout-button");
 const checkInButton = document.getElementById("check-in-button");
 const checkOutButton = document.getElementById("check-out-button");
+const lateReasonModal = document.getElementById("late-reason-modal");
+const lateModalText = document.getElementById("late-modal-text");
+const lateReasonInput = document.getElementById("late-reason-input");
+const lateReasonCancel = document.getElementById("late-reason-cancel");
+const lateReasonConfirm = document.getElementById("late-reason-confirm");
 
 let currentUser = null;
 let sessionPin = null;
+let lateReasonCallback = null;
 
 // Inisialisasi aplikasi ketika DOM selesai dimuat.
 document.addEventListener("DOMContentLoaded", () => {
@@ -74,6 +80,23 @@ function setupEventListeners() {
   storeSelect.addEventListener("change", () => {
     const selected = STORES[storeSelect.value];
     employeeActiveStoreField.textContent = selected ? selected.name : "-";
+  });
+
+  lateReasonCancel.addEventListener("click", () => {
+    closeLateReasonModal();
+    setLoading(false);
+  });
+
+  lateReasonConfirm.addEventListener("click", () => {
+    const reason = lateReasonInput.value.trim();
+    if (!reason) {
+      showToast("Alasan keterlambatan harus diisi.", false);
+      return;
+    }
+    if (typeof lateReasonCallback === "function") {
+      lateReasonCallback(reason);
+    }
+    closeLateReasonModal();
   });
 }
 
@@ -266,6 +289,12 @@ function handleAttendance(jenisAbsen) {
       const distanceText = `Jarak ke ${store.name}: ${Math.round(distance)} m / radius ${store.radius} m.`;
       setStatus(distanceText, distance <= store.radius);
 
+      const nowJakarta = getJakartaDate();
+      const totalMinutes = nowJakarta.getHours() * 60 + nowJakarta.getMinutes();
+      const startMinutes = 10 * 60;
+      const onTimeLimit = 10 * 60 + 5;
+      const endTimeMinutes = 19 * 60 + 45;
+
       const payload = {
         action: "ABSENSI",
         id: currentUser.ID,
@@ -279,7 +308,46 @@ function handleAttendance(jenisAbsen) {
         waktu: new Date().toISOString()
       };
 
-      sendAttendance(payload);
+      if (jenisAbsen === "MASUK") {
+        if (totalMinutes < startMinutes) {
+          const earlyMinutes = startMinutes - totalMinutes;
+          payload.keterangan = `Datang lebih awal ${earlyMinutes} menit`;
+          payload.menit_telat = 0;
+          payload.alasan_telat = "";
+          sendAttendance(payload);
+          return;
+        }
+
+        if (totalMinutes <= onTimeLimit) {
+          payload.keterangan = "Tepat waktu";
+          payload.menit_telat = 0;
+          payload.alasan_telat = "";
+          sendAttendance(payload);
+          return;
+        }
+
+        const lateMinutes = totalMinutes - startMinutes;
+        payload.keterangan = "Terlambat";
+        payload.menit_telat = lateMinutes;
+
+        setLoading(false);
+        showLateReasonModal(lateMinutes, (reason) => {
+          payload.alasan_telat = reason;
+          setLoading(true, "Menyimpan absensi...");
+          sendAttendance(payload);
+        });
+        return;
+      }
+
+      if (jenisAbsen === "PULANG") {
+        if (totalMinutes < endTimeMinutes) {
+          alert(`Hai ${currentUser.NAMA}\n\nJam pulang belum tersedia.\n\nAbsensi pulang dapat dilakukan mulai pukul 19:45 WIB.`);
+          setLoading(false);
+          return;
+        }
+        sendAttendance(payload);
+        return;
+      }
     },
     (error) => {
       console.error(error);
@@ -318,6 +386,9 @@ function sendAttendance(payload) {
       }
 
       showToast(data.message || "Absensi berhasil.");
+      if (data.message) {
+        alert(data.message);
+      }
       attendanceStatusField.textContent = payload.jenis_absen === "MASUK" ? "Sudah Masuk" : "Sudah Pulang";
     })
     .catch((error) => {
@@ -325,6 +396,23 @@ function sendAttendance(payload) {
       showToast("Koneksi ke server gagal", false);
     })
     .finally(() => setLoading(false));
+}
+
+function getJakartaDate() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+}
+
+function showLateReasonModal(minutesLate, callback) {
+  lateReasonCallback = callback;
+  lateReasonInput.value = "";
+  lateModalText.textContent = `Anda terlambat ${minutesLate} menit. Silakan isi alasan keterlambatan sebelum menyimpan.`;
+  lateReasonModal.classList.remove("hidden");
+}
+
+function closeLateReasonModal() {
+  lateReasonCallback = null;
+  lateReasonModal.classList.add("hidden");
+  lateReasonInput.value = "";
 }
 
 // Tampilkan status pesan di dashboard.

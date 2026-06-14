@@ -79,6 +79,19 @@
     </main>
 
     <div class="toast hidden" id="toast"></div>
+
+    <div class="modal-overlay hidden" id="late-reason-modal">
+      <div class="modal">
+        <h2>Alasan Keterlambatan</h2>
+        <p id="late-modal-text">Silakan isi alasan keterlambatan sebelum menyimpan absensi.</p>
+        <textarea id="late-reason-input" placeholder="Masukkan alasan keterlambatan..." rows="4"></textarea>
+        <div class="modal-actions">
+          <button id="late-reason-cancel" class="button tertiary">Batal</button>
+          <button id="late-reason-confirm" class="button primary">Simpan</button>
+        </div>
+      </div>
+    </div>
+
     <div class="loading-overlay hidden" id="loading-overlay">
       <div class="loader"></div>
       <p>Meminta lokasi...</p>
