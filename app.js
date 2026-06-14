@@ -131,14 +131,15 @@ function loginUser() {
 
   setLoading(true, "Memeriksa login...");
 
-  const formData = new FormData();
-  formData.append("action", "LOGIN");
-  formData.append("id", id);
-  formData.append("pin", pin);
+  const body = new URLSearchParams({
+    action: "LOGIN",
+    id,
+    pin
+  });
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    body: formData
+    body
   })
     .then((response) => response.json())
     .then((data) => {
@@ -173,14 +174,15 @@ function refreshSession() {
     return;
   }
 
-  const formData = new FormData();
-  formData.append("action", "LOGIN");
-  formData.append("id", currentUser.ID);
-  formData.append("pin", currentUser.PIN);
+  const body = new URLSearchParams({
+    action: "LOGIN",
+    id: currentUser.ID,
+    pin: currentUser.PIN
+  });
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    body: formData
+    body
   })
     .then((response) => response.json())
     .then((data) => {
@@ -293,14 +295,14 @@ function sendAttendance(payload) {
     return;
   }
 
-  const formData = new FormData();
+  const body = new URLSearchParams();
   Object.keys(payload).forEach((key) => {
-    formData.append(key, payload[key]);
+    body.append(key, payload[key]);
   });
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    body: formData
+    body
   })
     .then((response) => response.json())
     .then((data) => {
