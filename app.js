@@ -1,5 +1,5 @@
 // Konfigurasi endpoint Google Apps Script Web App.
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwxQ54Wu6AmrKkNct-k9F2C2F-YAelb3HWJjKci37ZTG796R2H2F86bZnpN9hc6gBZG/exec";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycby_TZqJHmcYXN5Ja3fT9ykl245ZU-tkwM305rakgRv1428tKYT49Kf07e4SqLnN2nj6/exec";
 const STORAGE_KEY = "employee";
 
 // Hardcoded outlet untuk validasi GPS di frontend.
