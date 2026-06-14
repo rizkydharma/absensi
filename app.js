@@ -124,10 +124,10 @@ function loginUser() {
     return;
   }
 
-  if (!GAS_ENDPOINT || GAS_ENDPOINT.includes("AKfycbwxQ54Wu6AmrKkNct-k9F2C2F-YAelb3HWJjKci37ZTG796R2H2F86bZnpN9hc6gBZG")) {
-    showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
-    return;
-  }
+ if (!GAS_ENDPOINT) {
+  showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
+  return;
+}
 
   setLoading(true, "Memeriksa login...");
 
@@ -166,10 +166,10 @@ function refreshSession() {
     return;
   }
 
-  if (!GAS_ENDPOINT || GAS_ENDPOINT.includes("AKfycbwxQ54Wu6AmrKkNct-k9F2C2F-YAelb3HWJjKci37ZTG796R2H2F86bZnpN9hc6gBZG")) {
-    showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
-    return;
-  }
+ if (!GAS_ENDPOINT) {
+  showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
+  return;
+}
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
@@ -283,11 +283,10 @@ function handleAttendance(jenisAbsen) {
 
 // Kirim data absensi ke backend dan tampilkan hasil.
 function sendAttendance(payload) {
-  if (!GAS_ENDPOINT || GAS_ENDPOINT.includes("AKfycbwxQ54Wu6AmrKkNct-k9F2C2F-YAelb3HWJjKci37ZTG796R2H2F86bZnpN9hc6gBZG")) {
-    showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
-    setLoading(false);
-    return;
-  }
+  if (!GAS_ENDPOINT) {
+  showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
+  return;
+}
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
