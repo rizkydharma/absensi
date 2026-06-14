@@ -124,19 +124,21 @@ function loginUser() {
     return;
   }
 
- if (!GAS_ENDPOINT) {
-  showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
-  return;
-}
+  if (!GAS_ENDPOINT) {
+    showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
+    return;
+  }
 
   setLoading(true, "Memeriksa login...");
 
+  const formData = new FormData();
+  formData.append("action", "LOGIN");
+  formData.append("id", id);
+  formData.append("pin", pin);
+
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ action: "LOGIN", id, pin })
+    body: formData
   })
     .then((response) => response.json())
     .then((data) => {
@@ -155,7 +157,7 @@ function loginUser() {
     })
     .catch((error) => {
       console.error(error);
-      showToast("Tidak dapat menghubungi server. Coba lagi nanti.", false);
+      showToast("Koneksi ke server gagal", false);
     })
     .finally(() => setLoading(false));
 }
@@ -166,17 +168,19 @@ function refreshSession() {
     return;
   }
 
- if (!GAS_ENDPOINT) {
-  showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
-  return;
-}
+  if (!GAS_ENDPOINT) {
+    showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("action", "LOGIN");
+  formData.append("id", currentUser.ID);
+  formData.append("pin", currentUser.PIN);
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ action: "LOGIN", id: currentUser.ID, pin: currentUser.PIN })
+    body: formData
   })
     .then((response) => response.json())
     .then((data) => {
@@ -195,6 +199,7 @@ function refreshSession() {
     })
     .catch((error) => {
       console.warn("Refresh session gagal", error);
+      showToast("Koneksi ke server gagal", false);
     });
 }
 
@@ -284,16 +289,18 @@ function handleAttendance(jenisAbsen) {
 // Kirim data absensi ke backend dan tampilkan hasil.
 function sendAttendance(payload) {
   if (!GAS_ENDPOINT) {
-  showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
-  return;
-}
+    showToast("GAS_ENDPOINT belum dikonfigurasi.", false);
+    return;
+  }
+
+  const formData = new FormData();
+  Object.keys(payload).forEach((key) => {
+    formData.append(key, payload[key]);
+  });
 
   fetch(GAS_ENDPOINT, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
+    body: formData
   })
     .then((response) => response.json())
     .then((data) => {
@@ -307,7 +314,7 @@ function sendAttendance(payload) {
     })
     .catch((error) => {
       console.error(error);
-      showToast("Terjadi kesalahan saat mengirim data.", false);
+      showToast("Koneksi ke server gagal", false);
     })
     .finally(() => setLoading(false));
 }
