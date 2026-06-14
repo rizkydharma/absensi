@@ -1,5 +1,5 @@
 // Konfigurasi endpoint Google Apps Script Web App.
-const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycby_TZqJHmcYXN5Ja3fT9ykl245ZU-tkwM305rakgRv1428tKYT49Kf07e4SqLnN2nj6/exec";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycby_r7upxj5jsfRxYFfqKX0ImaD06p2YvRtfUUA043jsTVrqhp4BAeE8fwBxIFWjv0zx/exec";
 const STORAGE_KEY = "employee";
 
 // Hardcoded outlet untuk validasi GPS di frontend.
@@ -42,6 +42,7 @@ const checkInButton = document.getElementById("check-in-button");
 const checkOutButton = document.getElementById("check-out-button");
 
 let currentUser = null;
+let sessionPin = null;
 
 // Inisialisasi aplikasi ketika DOM selesai dimuat.
 document.addEventListener("DOMContentLoaded", () => {
@@ -85,7 +86,7 @@ function restoreSession() {
 
   currentUser = savedEmployee;
   prepareAttendanceView(currentUser);
-  refreshSession();
+  // Tidak otomatis refresh jika PIN tidak disimpan demi keamanan.
 }
 
 function getSavedEmployee() {
@@ -148,10 +149,11 @@ function loginUser() {
         return;
       }
 
-      currentUser = {
+          currentUser = {
         ...data.user,
         attendanceStatus: data.attendanceStatus || "Belum Absen"
       };
+      sessionPin = pin;
       saveSession(currentUser);
       prepareAttendanceView(currentUser);
       showToast("Login berhasil.");
@@ -165,7 +167,7 @@ function loginUser() {
 
 // Refresh session untuk memperbarui status absensi di dashboard.
 function refreshSession() {
-  if (!currentUser || !currentUser.ID || !currentUser.PIN) {
+  if (!currentUser || !currentUser.ID || !sessionPin) {
     return;
   }
 
@@ -174,10 +176,14 @@ function refreshSession() {
     return;
   }
 
+  if (!sessionPin) {
+    return;
+  }
+
   const body = new URLSearchParams({
     action: "LOGIN",
     id: currentUser.ID,
-    pin: currentUser.PIN
+    pin: sessionPin
   });
 
   fetch(GAS_ENDPOINT, {
@@ -228,8 +234,8 @@ function prepareAttendanceView(user) {
 
 // Tangani request absensi masuk atau pulang.
 function handleAttendance(jenisAbsen) {
-  if (!currentUser || !currentUser.ID) {
-    showToast("Lakukan login terlebih dahulu.", false);
+  if (!currentUser || !currentUser.ID || !sessionPin) {
+    showToast("Lakukan login ulang terlebih dahulu.", false);
     return;
   }
 
@@ -263,7 +269,7 @@ function handleAttendance(jenisAbsen) {
       const payload = {
         action: "ABSENSI",
         id: currentUser.ID,
-        pin: currentUser.PIN,
+        pin: sessionPin,
         store_aktif: store.name,
         jenis_absen: jenisAbsen,
         latitude,
