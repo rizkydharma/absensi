@@ -467,11 +467,28 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // Daftarkan service worker untuk dukungan PWA.
+
 function registerServiceWorker() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("sw.js")
-      .then(() => console.log("Service worker terdaftar."))
-      .catch((error) => console.warn("Gagal mendaftar service worker", error));
-  }
+  if (!("serviceWorker" in navigator)) return;
+
+  let refreshing = false;
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register("./sw.js", {
+    updateViaCache: "none"
+  })
+    .then(async (registration) => {
+      console.log("Service worker terdaftar.");
+
+      // Periksa apakah ada versi baru.
+      await registration.update();
+    })
+    .catch((error) => {
+      console.warn("Gagal memperbarui service worker", error);
+    });
 }
