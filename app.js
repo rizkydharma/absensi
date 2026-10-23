@@ -10,12 +10,6 @@ const STORES = {
     lng: 112.61983167177651,
     radius: 100
   },
-  RZ02: {
-    name: "GOMEE MITRA",
-    lat: -7.983929066558858,
-    lng: 112.63170717993525,
-    radius: 100
-  },
   RZ03: {
     name: "PRODUKSI",
     lat: -7.97521191086531,
@@ -299,7 +293,7 @@ function handleAttendance(jenisAbsen) {
       const totalMinutes = nowJakarta.getHours() * 60 + nowJakarta.getMinutes();
       const startMinutes = 10 * 60;
       const onTimeLimit = 10 * 60 + 5;
-      const endTimeMinutes = 19 * 60 + 45;
+      const endTimeMinutes = 19 * 60 + 30;
 
       const payload = {
         action: "ABSENSI",
@@ -347,7 +341,7 @@ function handleAttendance(jenisAbsen) {
 
       if (jenisAbsen === "PULANG") {
         if (totalMinutes < endTimeMinutes) {
-          alert(`Hai ${currentUser.NAMA}\n\nJam pulang belum tersedia.\n\nAbsensi pulang dapat dilakukan mulai pukul 19:45 WIB.`);
+          alert(`Hai ${currentUser.NAMA}\n\nJam pulang belum tersedia.\n\nAbsensi pulang dapat dilakukan mulai pukul 19:30 WIB.`);
           setLoading(false);
           return;
         }
